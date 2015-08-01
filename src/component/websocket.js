@@ -2,13 +2,13 @@
 
 var socket = {
     create: function(url, openHandler, messageHandler, errorHandler){
-        var websocket = new WebSocket(url, ['soap', 'xmpp']);
+        var websocket = new WebSocket(url);
 
         websocket.onopen = openHandler;
-        websocket.onMessage = messageHandler;
+        websocket.onmessage = messageHandler;
         websocket.onerror = errorHandler;
-        return websocket
+        return websocket;
     }
-}
+};
 
 module.exports = socket;

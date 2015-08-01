@@ -1,7 +1,8 @@
 "use strict";
 
-var socket = require("./websocket");
+var websocket = require("./websocket");
 var Fluxxor = require("fluxxor");
+var _ = require("lodash");
 
 var constants = {
     WEBSOCKET_CONNECT: "WEBSOCKET_CONNECT",
@@ -9,7 +10,7 @@ var constants = {
     WEBSOCKET_SUCCESS: "WEBSOCKET_SUCCESS",
     WEBSOCKET_FAIL: "WEBSOCKET_FAIL",
 
-    WEBSOCKET_URL: "",
+    WEBSOCKET_URL: ["ws://","localhost:8888","/websocket"].join(""),
 
     CREATE_NODE: "CREATE_NODE",
     DELETE_NODE: "DELETE_NODE",
@@ -48,7 +49,7 @@ var actions = {
         var onMessage = function(event){
             var msg = JSON.parse(event.data);
             var type;
-            switch(msg.type){
+            switch(msg.head){
             case constants.MESSAGE_GET_ALL:
                 type = constants.WEBSOCKET_LOAD;
                 break;
@@ -81,7 +82,7 @@ var actions = {
         };
 
         // Creamos el websocket
-        var socket = socket.create(constants.WEBSOCKET_URL, onOpen, onMessage, onError);
+        var socket = websocket.create(constants.WEBSOCKET_URL, onOpen, onMessage, onError);
     },
     createNode: function(geojson){
         this.dispatch(constants.CREATE_NODE,{
@@ -150,8 +151,9 @@ var NodeStore = Fluxxor.createStore({
         };
     },
     onLoad: function(osmData){
-        for(osm in osmData.nodes)
-            this.nodes[node.id] = osm;
+        _.forEach(osmData.nodes, function(osm){
+            this.nodes[osm.id] = osm;
+        }, this);
         this.emit("change");
     },
     onCreateNode: function(osm){
@@ -195,8 +197,9 @@ var CuadraStore = Fluxxor.createStore({
         };
     },
     onLoad: function(osmData){
-        for (osm in osmData.cuadras)
+        _.forEach(osmData.cuadras, function(osm){
             this.cuadras[osm.id] = osm;
+        }, this);
         this.emit("change");
     },
     onCreateCuadra: function(osm){
