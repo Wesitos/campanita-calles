@@ -1,0 +1,22 @@
+body{
+  margin: 0;
+}
+
+.map{
+  position: relative;
+  overflow: hidden;
+}
+
+.tile{
+  pointer-events: none;
+}
+
+.node{
+    fill: blue;
+}
+
+.cuadra{
+    opacity:0.5;
+    stroke: black;
+    stroke-width: 5px;
+}

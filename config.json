@@ -27,7 +27,10 @@
     },
     "vendor": {
         "require": [
-        "react/addons"
+            "react/addons",
+            "fluxxor",
+            "d3",
+            "lodash"
         ],
 
       "build": {
