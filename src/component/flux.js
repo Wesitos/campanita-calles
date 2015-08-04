@@ -28,10 +28,10 @@ var constants = {
     MESSAGE_GET_ALL: "G_ALL",
     MESSAGE_CREATE_NODE: "C_NODE",
     MESSAGE_DELETE_NODE: "D_NODE",
-    MESSAGE_UPDATE_NODE: "u_NODE",
+    MESSAGE_UPDATE_NODE: "U_NODE",
     MESSAGE_CREATE_CUAD: "C_CUAD",
     MESSAGE_DELETE_CUAD: "D_CUAD",
-    MESSAGE_UPDATE_CUAD: "u_CUAD"
+    MESSAGE_UPDATE_CUAD: "U_CUAD"
 };
 
 var actions = {
@@ -97,7 +97,7 @@ var actions = {
     },
     updateNode: function(geojson){
         this.dispatch(constants.UPDATE_NODE, {
-            id: geojson.id,            
+            id: geojson.id,
             lon: geojson.geometry.coordinates[0],
             lat: geojson.geometry.coordinates[1],
             tags: geojson.properties
@@ -106,7 +106,7 @@ var actions = {
     selectNode: function(geojson){
         this.dispatch(constants.SELECT_NODE, geojson);
     },
-    
+
     createCuadra: function(geojson){
         this.dispatch(constants.CREATE_CUADRA, {
             id: geojson.id,
@@ -137,10 +137,10 @@ var NodeStore = Fluxxor.createStore({
 
         this.bindActions(
             constants.WEBSOCKET_LOAD, this.onLoad,
-            constants.CREATE_NODE, this.onCreateNode,   // {id: <Identificador unico>, coords: <array de coordenadas>}
-            constants.DELETE_NODE, this.onDeleteNode,   // {id: <Identificador unico>}
-            constants.UPDATE_NODE, this.onUpdateNode,   // {id: <Identificador unico>, coords: <array de coordenadas>}
-            constants.SELECT_NODE, this.onSelectNode  // {id: <Identificador unico>}
+            constants.CREATE_NODE, this.onCreateNode,
+            constants.DELETE_NODE, this.onDeleteNode,
+            constants.UPDATE_NODE, this.onUpdateNode,
+            constants.SELECT_NODE, this.onSelectNode
         );
     },
     getState: function(){
