@@ -1,9 +1,8 @@
 "use strict";
-
-var websocket = require("./websocket");
-var Fluxxor = require("fluxxor");
-var _ = require("lodash");
-var Immutable = require('immutable');
+import websocket from "./websocket";
+import Fluxxor from "fluxxor";
+import _ from "lodash";
+import Immutable from "immutable";
 
 var constants = {
     WEBSOCKET_CONNECT: "WEBSOCKET_CONNECT",

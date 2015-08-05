@@ -1,13 +1,8 @@
 'use strict';
-
-var React = require('react');
-var Fluxxor = require('fluxxor');
-var _ = require('lodash');
-var Immutable = require('immutable');
-
-var FluxMixin = Fluxxor.FluxMixin(React);
-
-var MapObject = require('./view-d3');
+import React from "react";
+import _ from "lodash";
+import Immutable from "immutable";
+import MapObject from "./view-d3";
 
 var Map = React.createClass({
     mixins: [React.addons.PureRenderMixin],

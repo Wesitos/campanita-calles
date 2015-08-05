@@ -1,18 +1,12 @@
 'use strict';
-
-var React = require('react');
-var Fluxxor = require('fluxxor');
-
-var FluxMixin = Fluxxor.FluxMixin(React);
-var StoreWatchMixin = Fluxxor.StoreWatchMixin;
-var flux = require("../component/flux");
-var _ = require("lodash");
-var Immutable = require('immutable');
-
-var Map = require('./Map.jsx');
+import React from "react";
+import {FluxMixin, StoreWatchMixin} from "fluxxor";
+import _ from "lodash";
+import Immutable from "immutable";
+import Map from "./Map.jsx";
 
 var MapContainer = React.createClass({
-    mixins: [FluxMixin,
+    mixins: [FluxMixin(React),
              StoreWatchMixin('NodeStore', 'CuadraStore')],
     getDefaultProps: function(){
         return {

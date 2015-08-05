@@ -1,8 +1,8 @@
 'use strict';
-
-var d3 = require("d3");
-var _ = require("lodash");
-d3.geo.tile = require("./d3-geo-tile");
+import d3 from "d3";
+import _ from "lodash";
+import geotile from "./d3-geo-tile";
+d3.geo.tile = geotile;
 
 // Para prefixes de navegadores
 function prefixMatch(p) {
