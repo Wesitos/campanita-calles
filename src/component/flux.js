@@ -3,6 +3,7 @@
 var websocket = require("./websocket");
 var Fluxxor = require("fluxxor");
 var _ = require("lodash");
+var Immutable = require('immutable');
 
 var constants = {
     WEBSOCKET_CONNECT: "WEBSOCKET_CONNECT",
@@ -10,7 +11,7 @@ var constants = {
     WEBSOCKET_SUCCESS: "WEBSOCKET_SUCCESS",
     WEBSOCKET_FAIL: "WEBSOCKET_FAIL",
 
-    WEBSOCKET_URL: ["ws://","localhost:8888","/websocket"].join(""),
+    WEBSOCKET_URL: ["ws://",window.location.host,"/websocket"].join(""),
 
     CREATE_NODE: "CREATE_NODE",
     DELETE_NODE: "DELETE_NODE",
@@ -48,6 +49,7 @@ var actions = {
         };
         var onMessage = function(event){
             var msg = JSON.parse(event.data);
+            msg.origin = "server";
             var type;
             switch(msg.head){
             case constants.MESSAGE_GET_ALL:
@@ -131,9 +133,9 @@ var actions = {
 
 var NodeStore = Fluxxor.createStore({
     initialize: function(){
-        this.nodes = {};
-        this.selected = null;
-        this.lastSelected = null;
+        this.nodes = Immutable.Map();
+        this.selected = Immutable.Map();
+        this.lastSelected = Immutable.Map();
 
         this.bindActions(
             constants.WEBSOCKET_LOAD, this.onLoad,
@@ -144,80 +146,80 @@ var NodeStore = Fluxxor.createStore({
         );
     },
     getState: function(){
-        return {
-            nodes: this.nodes,
-            selectedNode: this.selected,
-            lastSelectedNode: this.lastSelected
-        };
+        return Immutable.Map({nodes: this.nodes,
+                              selectedNode: this.selected,
+                              lastSelectedNode: this.lastSelected});
     },
     onLoad: function(osmData){
-        _.forEach(osmData.nodes, function(osm){
-            this.nodes[osm.id] = osm;
+        _.map(osmData.nodes, function(osm){
+            this.nodes = this.nodes.set(osm.id, Immutable.fromJS(osm));
         }, this);
         this.emit("change");
     },
     onCreateNode: function(osm){
-        this.nodes[osm.id] = osm;
+        this.nodes = this.nodes.set(osm.id,
+                                    Immutable.fromJS(osm));
         this.emit("change");
     },
     onDeleteNode: function(osm){
         this.selected = this.lastSelected = undefined;
+        this.nodes = this.nodes.delete(osm.id);
         this.emit("change");
     },
     onUpdateNode: function(data){
-        this.nodes[data.id] = {coords: data.coords, props: data.props};
+        this.nodes = this.nodes.set(data.id, Immutable.fromJS(osm));
         this.emit("change");
     },
     onSelectNode: function(data){
         this.lastSelected = this.selected;
-        this.selected = this.nodes[data.id];
+        this.selected = this.nodes.get(data.id);
         this.emit("change");
     }
 });
 
 var CuadraStore = Fluxxor.createStore({
     initialize: function(){
-        this.cuadras = {};
-        this.selected = null;
+        this.cuadras = Immutable.Map();
+        this.selected = Immutable.Map();
 
         this.bindActions(
             constants.WEBSOCKET_LOAD, this.onLoad,
-            constants.CREATE_CUADRA, this.onCreateCuadra,   // {id: <Identificador unico>, nodes: <array de ids de nodos>}
-            constants.DELETE_CUADRA, this.onDeleteCuadra,  // {id: <Identificador unico>}
-            constants.UPDATE_CUADRA, this.onUpdateCuadra,  // {id: <Identificador unico>, nodes: <array de ids de nodos>}
-            constants.SELECT_CUADRA, this.onSelectCuadra, // {id: <Identificador unico>}
+            constants.CREATE_CUADRA, this.onCreateCuadra,
+            constants.DELETE_CUADRA, this.onDeleteCuadra,
+            constants.UPDATE_CUADRA, this.onUpdateCuadra,
+            constants.SELECT_CUADRA, this.onSelectCuadra,
 
             constants.DELETE_NODE, this.onDeleteNode
         );
     },
     getState: function(){
-        return {
+        return Immutable.Map({
             cuadras: this.cuadras,
-            selectedCuadra: this.selected
-        };
+            selectedCuadra: this.selected});
     },
     onLoad: function(osmData){
-        _.forEach(osmData.cuadras, function(osm){
-            this.cuadras[osm.id] = osm;
+        _.map(osmData.cuadras, function(osm){
+            this.cuadras = this.cuadras.set(osm.id, Immutable.fromJS(osm));
         }, this);
         this.emit("change");
     },
     onCreateCuadra: function(osm){
-        this.cuadras[osm.id] = osm;
+        this.cuadras = this.cuadras.set(osm.id,
+                                        Immutable.fromJS(osm));
         this.emit("change");
     },
     onDeleteCuadra: function(osm){
-        if (this.selected.id == osm.id)
-            this.selected = null;
-        this.cuadras[osm.id] = undefined;
+        this.selected = null;
+        this.cuadras = this.cuadras.delete(osm.id);
         this.emit("change");
     },
     onUpdateCuadra: function(osm){
-        this.cuadras[data.id].nodes = osm;
+        this.cuadras = this.cuadras.set(osm.id,
+                                        Immutable.fromJS(osm));
         this.emit("change");
     },
     onSelectCuadra: function(osm){
-        this.selected = this.cuadras[osm.id];
+        this.selected = this.cuadras.get(osm.id);
         this.emit("change");
     },
     onDeleteNode: function(osm){
@@ -225,12 +227,12 @@ var CuadraStore = Fluxxor.createStore({
         var id = osm.id;
         var changed = false;
         this.select = undefined;
-        _.forEach(cuadras, function(cuadra,id){
-            if(id in cuadra.nodes){
-                changed = true;
-                cuadras[id] = undefined;
-            }
+        var next = null;
+        var nodeFilter = function(v){return v==id;};
+        var filterCuadras = this.cuadras.filterNot(function(cuadra){
+            cuadra.nodes.find(nodefilter);
         });
+        this.cuadras = filterCuadras;
         this.emit("change");
     }
 });
@@ -289,9 +291,7 @@ var flux = new Fluxxor.Flux(stores, actions);
 
 //Debug
 flux.on("dispatch", function(type, payload) {
-    if (console && console.log) {
-        console.log("[Dispatch]", type, payload);
-    }
+    console.log("[Dispatch]", type, payload);
 });
 
 module.exports = flux;

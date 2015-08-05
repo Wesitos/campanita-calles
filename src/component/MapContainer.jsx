@@ -7,6 +7,7 @@ var FluxMixin = Fluxxor.FluxMixin(React);
 var StoreWatchMixin = Fluxxor.StoreWatchMixin;
 var flux = require("../component/flux");
 var _ = require("lodash");
+var Immutable = require('immutable');
 
 var Map = require('./Map.jsx');
 
@@ -23,22 +24,21 @@ var MapContainer = React.createClass({
         var flux = this.getFlux();
         var DataNodes = flux.store("NodeStore").getState();
         var DataCuadras = flux.store("CuadraStore").getState();
-        return _.merge(DataNodes, DataCuadras);
+        return DataNodes.merge(DataCuadras).toObject();
     },
-    nodeClickHandler: function(node){
-        this.getFlux().actions.selectNode(node);
+    nodeClickHandler: function(geojson){
+        this.getFlux().actions.selectNode(geojson);
     },
-    cuadraClickHandler: function(cuadra){
-        this.getFlux().actions.selectCuadra(cuadra);
+    cuadraClickHandler: function(geojson){
+        this.getFlux().actions.selectCuadra(geojson);
     },
     render: function(){
         return(
             <Map height={this.props.height}
                  width={this.props.width}
-                 nodes={this.state.nodes}
-                 cuadras={this.state.cuadras}
                  onNodeClick={this.nodeClickHandler}
-                 onCuadraClick={this.cuadraClickHandler}/>
+                 onCuadraClick={this.cuadraClickHandler}
+                 {...this.state}/>
         );
     }
 });

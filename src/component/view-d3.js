@@ -17,7 +17,9 @@ function prefixMatch(p) {
 module.exports = function(){
     var MapObject = {
         // Al inicio no hay data
-        data: [],
+        nodes: [],
+        cuadras: [],
+        selected: {},
         create: function(htmlNode, state){
             var width = Math.max(960, state.width || 0),
                 height = Math.max(500, state.height || 0),
@@ -42,7 +44,7 @@ module.exports = function(){
             // Define el comportamiento del zoom del mapa
             var zoom = d3.behavior.zoom()
                 .scale(projection.scale() * 2 * Math.PI)
-                .scaleExtent([1 << 23, 1 << 25])
+                .scaleExtent([1 << 23, 1 << 27])
                 .translate(center)
                 .on("zoom", zoomed);
 
@@ -125,16 +127,15 @@ module.exports = function(){
                 // Actualiza la data de cuadras
                 var cuadras = cuadraContainer
                         .selectAll("path")
-                        .data(_.filter(self.data, function(d){
-                            return d.geometry.type.toLowerCase() == "linestring";
-                        }), function (d) {
-                            return d.id;
-                        });
+                        .data(self.cuadras);
 
                 // Actualiza las cuadras ya dibujadas
                 cuadras
                     .attr("class", "cuadra")
-                    .attr("d",geoPath);
+                    .attr("d",geoPath)
+                    .classed("selected-cuadra", function(d){
+                        return d.id == self.selected.cuadra;
+                    });
 
                 // Monta las cuadras nuevas
                 cuadras.enter()
@@ -150,11 +151,7 @@ module.exports = function(){
                 // Actualiza la data de nodos
                 var nodes = nodeContainer
                         .selectAll("path")
-                        .data(_.filter(self.data, function(d){
-                            return d.geometry.type.toLowerCase() == "point";
-                        }), function (d) {
-                            return d.id;
-                        });
+                        .data(self.nodes);
 
                 // Actualiza los nodos ya dibujados
                 nodes
@@ -178,7 +175,13 @@ module.exports = function(){
 
             this.update = function(data){
                 // Actualiza la data
-                self.data = data;
+                self.nodes = data.nodes;
+                self.cuadras = data.cuadras;
+                self.selected ={
+                    node: data.selectNode,
+                    prevNode: data.prevSelectedNode,
+                    cuadra: data.selectedCuadra
+                };
                 console.log("Update:", data);
                 // Actualiza el mapa
                 zoomed();

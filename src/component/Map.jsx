@@ -3,12 +3,14 @@
 var React = require('react');
 var Fluxxor = require('fluxxor');
 var _ = require('lodash');
+var Immutable = require('immutable');
 
 var FluxMixin = Fluxxor.FluxMixin(React);
 
-var MapObject =require('./view-d3');
+var MapObject = require('./view-d3');
 
 var Map = React.createClass({
+    mixins: [React.addons.PureRenderMixin],
     componentDidMount: function(){
         var node = React.findDOMNode(this.refs.container);
         this.map = MapObject();
@@ -18,34 +20,40 @@ var Map = React.createClass({
     },
     // Construye los geoJson
     computeData: function(){
-        var dictNodos = this.props.nodes;
-        var cuadras = _.map(this.props.cuadras, function(osm, key){
+        var MapNodos = this.props.nodes;
+        var cuadras = _.map(this.props.cuadras.toArray(), function(osm){
             return {
                 type: "Feature",
-                id: osm.id,
+                id: osm.get("id"),
                 geometry:{
-                    nodes: osm.nodes, // tambien pasamos los ids
+                    nodes: osm.get("nodes").toArray(), // tambien pasamos los ids
                     type: "LineString",
-                    coordinates: _.map(osm.nodes, function(id){
-                        var osm = dictNodos[id];
-                        return [osm.lon,osm.lat];
+                    coordinates: _.map(osm.get("nodes").toArray(), function(id){
+                        var osm = MapNodos.get(id);
+                        return [osm.get("lon"),osm.get("lat")];
                     })
                 },
-                properties: osm.tags
+                properties: osm.get("tags").toObject()
             };
         });
-        var nodos = _.map(dictNodos, function(osm, key){
+        var nodos = _.map(MapNodos.toArray(), function(osm){
             return {
                 type: "Feature",
-                id:osm.id,
+                id:osm.get("id"),
                 geometry: {
                     type: "Point",
-                    coordinates: [osm.lon,osm.lat]
+                    coordinates: [osm.get("lon"),osm.get("lat")]
                 },
-                properties: osm.tags
+                properties: osm.get("tags").toObject()
             };
         });
-        return nodos.concat(cuadras);
+        return {
+            nodes: nodos,
+            cuadras: cuadras,
+            selectedNode: this.props.selectedNode.toObject(),
+            prevSelectedNode: this.props.lastSelectedNode.toObject(),
+            selectedCuadra: this.props.selectedCuadra.toObject()
+        };
     },
     componentDidUpdate: function(){
         this.map.update(this.computeData());
