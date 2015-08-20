@@ -17,13 +17,14 @@ var Map = React.createClass({
     computeData: function(){
         var MapNodos = this.props.nodes;
         var cuadras = _.map(this.props.cuadras.toArray(), function(osm){
+            var nodeIds = osm.get("nodes").toArray();
             return {
                 type: "Feature",
                 id: osm.get("id"),
+                nodes: nodeIds, // tambien pasamos los ids
                 geometry:{
-                    nodes: osm.get("nodes").toArray(), // tambien pasamos los ids
                     type: "LineString",
-                    coordinates: _.map(osm.get("nodes").toArray(), function(id){
+                    coordinates: _.map(nodeIds, function(id){
                         var osm = MapNodos.get(id);
                         return [osm.get("lon"),osm.get("lat")];
                     })
@@ -44,10 +45,11 @@ var Map = React.createClass({
         });
         return {
             nodes: nodos,
-            cuadras: cuadras,
-            selectedNode: this.props.selectedNode.toObject(),
-            prevSelectedNode: this.props.lastSelectedNode.toObject(),
-            selectedCuadra: this.props.selectedCuadra.toObject()
+            calles: cuadras,
+            selectedNode: this.props.selectedNode.toJS(),
+            prevSelectedNode: this.props.lastSelectedNode.toJS(),
+            selectedCuadra: this.props.selectedCuadra.toJS(),
+            nodeMap: this.props.nodes
         };
     },
     componentDidUpdate: function(){

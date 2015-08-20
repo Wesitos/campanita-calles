@@ -37,9 +37,9 @@ var constants = {
 var actions = {
     websocketConnect: function(){
         this.dispatch(constants.WEBSOCKET_CONNECT);
-        var flux = this;
+        var self = this;
         var onOpen = function(event){
-            flux.dispatch(constants.WEBSOCKET_SUCCESS, {socket: this});
+            self.dispatch(constants.WEBSOCKET_SUCCESS, {socket: this});
             var msg = {
                 head: constants.MESSAGE_GET_ALL,
                 body: ""
@@ -48,7 +48,7 @@ var actions = {
         };
         var onMessage = function(event){
             var msg = JSON.parse(event.data);
-            msg.origin = "server";
+            msg.body.origin = "server";
             var type;
             switch(msg.head){
             case constants.MESSAGE_GET_ALL:
@@ -73,13 +73,13 @@ var actions = {
                 type = constants.UPDATE_CUADRA;
                 break;
             };
-            flux.dispatch(type, msg.body);
+            self.dispatch(type, msg.body);
         };
 
         var onError = function(event){
-            flux.dispatch(constants.WEBSOCKET_FAIL);
+            self.dispatch(constants.WEBSOCKET_FAIL);
             console.log("ERROR DE WEBSOCKET, reintentando en 1s");
-            setTimeout(function(){flux.dispatch(constants.WEBSOCKET_CONNECT);}, 1000);
+            setTimeout(function(){self.flux.actions.websocketConnect();}, 1000);
         };
 
         // Creamos el websocket
@@ -260,22 +260,28 @@ var CommunicationStore = Fluxxor.createStore({
         this.socket.send(JSON.stringify(msg));
     },
     onCreateNode: function(data){
-        this.send(constants.MESSAGE_CREATE_NODE, data);
+        if (data.origin != "server")
+            this.send(constants.MESSAGE_CREATE_NODE, data);
     },
     onDeleteNode: function(data){
-        this.send(constants.MESSAGE_DELETE_NODE, data);
+        if (data.origin != "server")
+            this.send(constants.MESSAGE_DELETE_NODE, data);
     },
     onUpdateNode: function(data){
-        this.send(constants.MESSAGE_UPDATE_NODE, data);
+        if (data.origin != "server")
+            this.send(constants.MESSAGE_UPDATE_NODE, data);
     },
     onCreateCuadra: function(data){
-        this.send(constants.MESSAGE_CREATE_CUAD, data);
+        if (data.origin != "server")
+            this.send(constants.MESSAGE_CREATE_CUAD, data);
     },
     onDeleteCuadra: function(data){
-        this.send(constants.MESSAGE_DELETE_CUAD, data);
+        if (data.origin != "server")
+            this.send(constants.MESSAGE_DELETE_CUAD, data);
     },
     onUpdateCuadra: function(data){
-        this.send(constants.MESSAGE_UPDATE_CUAD, data);
+        if (data.origin != "server")
+            this.send(constants.MESSAGE_UPDATE_CUAD, data);
     }
 });
 
