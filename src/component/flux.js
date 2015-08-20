@@ -12,26 +12,14 @@ var constants = {
 
     WEBSOCKET_URL: ["ws://",window.location.host,"/websocket"].join(""),
 
-    CREATE_NODE: "CREATE_NODE",
-    DELETE_NODE: "DELETE_NODE",
-    UPDATE_NODE: "UPDATE_NODE",
     SELECT_NODE: "SELECTED_NODE",
 
-    CREATE_CUADRA: "CREATE_CUADRA",
-    DELETE_CUADRA: "DELETE_CUADRA",
-    UPDATE_CUADRA: "UPDATE_CUADRA",
     SELECT_CUADRA: "SELECTED_CUADRA",
 
     MOUSE_MOVED: "MOUSE_MOVED",
 
     // Message types
-    MESSAGE_GET_ALL: "G_ALL",
-    MESSAGE_CREATE_NODE: "C_NODE",
-    MESSAGE_DELETE_NODE: "D_NODE",
-    MESSAGE_UPDATE_NODE: "U_NODE",
-    MESSAGE_CREATE_CUAD: "C_CUAD",
-    MESSAGE_DELETE_CUAD: "D_CUAD",
-    MESSAGE_UPDATE_CUAD: "U_CUAD"
+    MESSAGE_GET_ALL: "G_ALL"
 };
 
 var actions = {
@@ -54,24 +42,6 @@ var actions = {
             case constants.MESSAGE_GET_ALL:
                 type = constants.WEBSOCKET_LOAD;
                 break;
-            case constants.MESSAGE_CREATE_NODE:
-                type = constants.CREATE_NODE;
-                break;
-            case constants.MESSAGE_DELETE_NODE:
-                type = constants.DELETE_NODE;
-                break;
-            case constants.MESSAGE_UPDATE_NODE:
-                type = constants.UPDATE_NODE;
-                break;
-            case constants.MESSAGE_CREATE_CUADRA:
-                type = constants.CREATE_CUADRA;
-                break;
-            case constants.MESSAGE_DELETE_CUAD:
-                type = constants.DELETE_CUADRA;
-                break;
-            case constants.MESSAGE_UPDATE_CUAD:
-                type = constants.UPDATE_CUADRA;
-                break;
             };
             self.dispatch(type, msg.body);
         };
@@ -84,46 +54,6 @@ var actions = {
 
         // Creamos el websocket
         var socket = websocket.create(constants.WEBSOCKET_URL, onOpen, onMessage, onError);
-    },
-    createNode: function(geojson){
-        this.dispatch(constants.CREATE_NODE,{
-            id: geojson.id,
-            lon: geojson.geometry.coordinates[0],
-            lat: geojson.geometry.coordinates[1],
-            tags: geojson.properties
-        });
-    },
-    deleteNode: function(geojson){
-        this.dispatch(constants.DELETE_NODE, geojson);
-    },
-    updateNode: function(geojson){
-        this.dispatch(constants.UPDATE_NODE, {
-            id: geojson.id,
-            lon: geojson.geometry.coordinates[0],
-            lat: geojson.geometry.coordinates[1],
-            tags: geojson.properties
-        });
-    },
-    selectNode: function(geojson){
-        this.dispatch(constants.SELECT_NODE, geojson);
-    },
-
-    createCuadra: function(geojson){
-        this.dispatch(constants.CREATE_CUADRA, {
-            id: geojson.id,
-            nodes: geojson.geometry.nodes,
-            tags: geojson.properties
-        });
-    },
-    deleteCuadra: function(geojson){
-        this.dispatch(constants.DELETE_CUADRA, geojson);
-    },
-    updateCuadra: function(geojson){
-        this.dispatch(constants.UPDATE_CUADRA, {
-            id: geojson.id,
-            nodes: geojson.geometry.nodes,
-            tags: geojson.properties
-        });
     },
     selectCuadra: function(geojson){
         this.dispatch(constants.SELECT_CUADRA, geojson);
@@ -138,9 +68,6 @@ var NodeStore = Fluxxor.createStore({
 
         this.bindActions(
             constants.WEBSOCKET_LOAD, this.onLoad,
-            constants.CREATE_NODE, this.onCreateNode,
-            constants.DELETE_NODE, this.onDeleteNode,
-            constants.UPDATE_NODE, this.onUpdateNode,
             constants.SELECT_NODE, this.onSelectNode
         );
     },
@@ -153,20 +80,6 @@ var NodeStore = Fluxxor.createStore({
         _.map(osmData.nodes, function(osm){
             this.nodes = this.nodes.set(osm.id, Immutable.fromJS(osm));
         }, this);
-        this.emit("change");
-    },
-    onCreateNode: function(osm){
-        this.nodes = this.nodes.set(osm.id,
-                                    Immutable.fromJS(osm));
-        this.emit("change");
-    },
-    onDeleteNode: function(osm){
-        this.selected = this.lastSelected = undefined;
-        this.nodes = this.nodes.delete(osm.id);
-        this.emit("change");
-    },
-    onUpdateNode: function(data){
-        this.nodes = this.nodes.set(data.id, Immutable.fromJS(osm));
         this.emit("change");
     },
     onSelectNode: function(data){
@@ -183,12 +96,7 @@ var CuadraStore = Fluxxor.createStore({
 
         this.bindActions(
             constants.WEBSOCKET_LOAD, this.onLoad,
-            constants.CREATE_CUADRA, this.onCreateCuadra,
-            constants.DELETE_CUADRA, this.onDeleteCuadra,
-            constants.UPDATE_CUADRA, this.onUpdateCuadra,
-            constants.SELECT_CUADRA, this.onSelectCuadra,
-
-            constants.DELETE_NODE, this.onDeleteNode
+            constants.SELECT_CUADRA, this.onSelectCuadra
         );
     },
     getState: function(){
@@ -202,36 +110,8 @@ var CuadraStore = Fluxxor.createStore({
         }, this);
         this.emit("change");
     },
-    onCreateCuadra: function(osm){
-        this.cuadras = this.cuadras.set(osm.id,
-                                        Immutable.fromJS(osm));
-        this.emit("change");
-    },
-    onDeleteCuadra: function(osm){
-        this.selected = null;
-        this.cuadras = this.cuadras.delete(osm.id);
-        this.emit("change");
-    },
-    onUpdateCuadra: function(osm){
-        this.cuadras = this.cuadras.set(osm.id,
-                                        Immutable.fromJS(osm));
-        this.emit("change");
-    },
     onSelectCuadra: function(osm){
         this.selected = this.cuadras.get(osm.id);
-        this.emit("change");
-    },
-    onDeleteNode: function(osm){
-        var cuadras = this.cuadras;
-        var id = osm.id;
-        var changed = false;
-        this.select = undefined;
-        var next = null;
-        var nodeFilter = function(v){return v==id;};
-        var filterCuadras = this.cuadras.filterNot(function(cuadra){
-            cuadra.nodes.find(nodefilter);
-        });
-        this.cuadras = filterCuadras;
         this.emit("change");
     }
 });
@@ -244,13 +124,6 @@ var CommunicationStore = Fluxxor.createStore({
     },
     onWebSocketSuccess: function(data){
         this.socket = data.socket;
-        this.bindActions(
-            constants.CREATE_NODE, this.onCreateNode,
-            constants.DELETE_NODE, this.onDeleteNode,
-            constants.UPDATE_NODE, this.onUpdateNode,
-            constants.CREATE_CUADRA, this.onCreateCuadra,
-            constants.DELETE_CUADRA, this.onDeleteCuadra,
-            constants.UPDATE_CUADRA, this.onUpdateCuadra);
     },
     _send: function(type, data){
         var msg = {
@@ -259,32 +132,7 @@ var CommunicationStore = Fluxxor.createStore({
         };
         this.socket.send(JSON.stringify(msg));
     },
-    onCreateNode: function(data){
-        if (data.origin != "server")
-            this.send(constants.MESSAGE_CREATE_NODE, data);
-    },
-    onDeleteNode: function(data){
-        if (data.origin != "server")
-            this.send(constants.MESSAGE_DELETE_NODE, data);
-    },
-    onUpdateNode: function(data){
-        if (data.origin != "server")
-            this.send(constants.MESSAGE_UPDATE_NODE, data);
-    },
-    onCreateCuadra: function(data){
-        if (data.origin != "server")
-            this.send(constants.MESSAGE_CREATE_CUAD, data);
-    },
-    onDeleteCuadra: function(data){
-        if (data.origin != "server")
-            this.send(constants.MESSAGE_DELETE_CUAD, data);
-    },
-    onUpdateCuadra: function(data){
-        if (data.origin != "server")
-            this.send(constants.MESSAGE_UPDATE_CUAD, data);
-    }
 });
-
 
 var stores = {
     NodeStore: new NodeStore(),
