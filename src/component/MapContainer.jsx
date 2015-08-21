@@ -7,7 +7,7 @@ import Map from "./Map.jsx";
 
 var MapContainer = React.createClass({
     mixins: [FluxMixin(React),
-             StoreWatchMixin('NodeStore', 'CuadraStore')],
+             StoreWatchMixin('NodeStore', 'CalleStore', 'DireccionStore')],
     getDefaultProps: function(){
         return {
             height: 500,
@@ -16,22 +16,27 @@ var MapContainer = React.createClass({
     },
     getStateFromFlux: function(){
         var flux = this.getFlux();
-        var DataNodes = flux.store("NodeStore").getState();
-        var DataCuadras = flux.store("CuadraStore").getState();
-        return DataNodes.merge(DataCuadras).toObject();
+        var dataNodes = flux.store("NodeStore").getState();
+        var dataCalles = flux.store("CalleStore").getState();
+        var dataDireccion = flux.store("DireccionStore").getState();
+        return dataNodes.merge(dataCalles).merge(dataDireccion).toObject();
     },
     nodeClickHandler: function(geojson){
         this.getFlux().actions.selectNode(geojson);
     },
-    cuadraClickHandler: function(geojson){
-        this.getFlux().actions.selectCuadra(geojson);
+    calleClickHandler: function(geojson, geoSegment){
+        this.getFlux().actions.selectSegment(geoSegment);
+    },
+    segmentClickHandler: function(immutable){
+        this.getFlux().actions.unselectSegment(immutable);
     },
     render: function(){
         return(
             <Map height={this.props.height}
                  width={this.props.width}
                  onNodeClick={this.nodeClickHandler}
-                 onCuadraClick={this.cuadraClickHandler}
+                 onCalleClick={this.calleClickHandler}
+                 onSegmentClick={this.segmentClickHandler}
                  {...this.state}/>
         );
     }

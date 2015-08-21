@@ -46,10 +46,9 @@ module.exports = function(){
             this.height = height;
             // Interfaz de eventos con react:
             this.mouseMovedCallback = state.mouseMovedCallback;
-            this.clickCallback = state.clickCallback;
 
             var tile = d3.geo.tile()
-                .size([width, height]);
+                    .size([width, height]);
 
             // La proyeccion que vamos a usar, suele ser mercator para tiles
             var projection = d3.geo.mercator()
@@ -75,29 +74,32 @@ module.exports = function(){
 
             // Crea el nodo del mapa
             var map = d3.select(htmlNode).append("svg")
-                .attr("class", "map")
-                .style("width", width + "px")
-                .style("height", height + "px")
-                .call(zoom)
-                .on("mousemove", mouseMoved);
+                    .attr("class", "map")
+                    .style("width", width + "px")
+                    .style("height", height + "px")
+                    .call(zoom)
+                    .on("mousemove", mouseMoved);
             this.map = map;
 
             // Agrega el layer de los tiles al mapa
-            var layer = map.append("g")
-                .attr("class", "layer");
+            var tileContainer = map.append("g")
+                    .attr("id", "tileContainer");
 
             // Agrega el infobox al mapa
             var info = d3.select(htmlNode)
                     .append("div")
                     .attr("class", "info");
 
+            var layers = map.append("g")
+                    .attr("id", "layers");
+            
             // Para las calles
-            var calleContainer = map.append("g")
+            var calleContainer = layers.append("g")
                     .attr("id", "calleContainer");
 
-            // Para los nodos
-            var nodeContainer = map.append("g")
-                    .attr("id", "nodeContainer");
+            // Para los segmentos seleccionados
+            var segmentContainer = layers.append("g")
+                    .attr("id", "segmentContainer");
 
             // Carga la data inicial
             //this.update(state.data);
@@ -110,19 +112,19 @@ module.exports = function(){
                 var scale = zoom.scale(),
                     translate = zoom.translate();
                 var tiles = tile
-                    .scale(scale)
+                        .scale(scale)
                         .translate(translate)();
 
                 var geoPath = d3.geo.path()
-                    .projection(projection)
+                        .projection(projection)
                         .pointRadius(function(d){
                             return 5/zoom.scale();
                         });
 
-                var image = layer
-                    .attr("transform","scale(" + tiles.scale + ")translate(" + tiles.translate + ")")
-                    .selectAll("image")
-                    .data(tiles, function(d) { return d; });
+                var image = tileContainer
+                        .attr("transform","scale(" + tiles.scale + ")translate(" + tiles.translate + ")")
+                        .selectAll("image")
+                        .data(tiles, function(d) { return d; });
 
                 image.exit()
                     .remove();
@@ -139,7 +141,7 @@ module.exports = function(){
                     .attr("x", function(d) { return d[0]; })
                     .attr("y", function(d) { return d[1]; });
 
-                calleContainer
+                layers
                     .attr("transform","translate("+translate+")scale("+ scale +")");
 
                 // Actualiza la data de calles
@@ -165,59 +167,24 @@ module.exports = function(){
                 calles.exit()
                     .remove();
 
-                // Mostramos los nodos de la cuadra seleccionada
-                nodeContainer.
-                    attr("transform","translate("+translate+")scale("+ scale +")");
-
-                var nodes = nodeContainer
+                var segments = segmentContainer
                         .selectAll("path")
-                        .data(_.map(_.result(self.selected.calle, "nodes", []), function(id){
-                            var osm = self.nodeMap.get(id).toJS();
-                            return {
-                                id: osm.id,
-                                type: "Feature",
-                                geometry:{
-                                    type: "Point",
-                                    coordinates: [osm.lon, osm.lat]
-                                }
-                            };
-                        }), function(d){return d.id;});
+                        .attr("class","segment")
+                        .data(self.selected.segments, function(d){
+                            return d.original;
+                        });
 
-                nodes.attr("d", geoPath);
-
-                nodes.enter()
+                segments
+                    .enter()
                     .append("path")
-                    .attr("class", "node")
-                    .attr("d", geoPath);
-
-                nodes.exit()
-                    .remove();
-                /**
-                // Actualiza la data de nodos
-                var nodes = nodeContainer
-                        .selectAll("path")
-                        .data(self.nodes);
-
-                // Actualiza los nodos ya dibujados
-                nodes
-                    .attr("class", "node")
-                    .attr("d", geoPath);
-
-                // Monta los nodos nuevos
-                nodes.enter()
-                    .append("path")
-                    .attr("class", "node")
+                    .attr("class", "segment")
                     .attr("d", geoPath)
-                    .on("click", state.onNodeClick);
+                    .on("click", segmentClickHandler);
 
-                // Desmonta los nodos  eliminados
-                nodes.exit()
+                segments
+                    .exit()
                     .remove();
-                 **/
-            };
-
-            // Dibuja el mapa
-            zoomed();
+            }
 
             this.update = function(data){
                 // Actualiza la data
@@ -227,7 +194,8 @@ module.exports = function(){
                 self.selected ={
                     node: data.selectNode,
                     prevNode: data.prevSelectedNode,
-                    calle: data.selectedCuadra
+                    calle: data.selectedCalle,
+                    segments: data.selectedSegments
                 };
                 console.log("Update:", data);
                 // Actualiza el mapa
@@ -245,8 +213,15 @@ module.exports = function(){
                     else
                         return result;
                 }, {index: 0, distance: Infinity});
-                state.onCuadraClick(data, closest.index);
+                
+                state.onCalleClick(data, [data.geometry.coordinates[closest.index],
+                                          data.geometry.coordinates[closest.index + 1]]);
             };
+
+            function segmentClickHandler(data){
+                state.onSegmentClick(data.original);
+            };
+
             // Funcion para proyectar de cartesianas (svg) a geograficas
             function inverseProject(coords){
                 var scale = zoom.scale();
@@ -255,6 +230,7 @@ module.exports = function(){
                     return (v - trans[i])/ scale;
                 }));
             };
+
             // funcion que define el handler del movimiento del mouse
             function mouseMoved(data) {
                 var coords = inverseProject(d3.mouse(this));

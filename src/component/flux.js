@@ -15,12 +15,35 @@ var constants = {
     SELECT_NODE: "SELECTED_NODE",
 
     SELECT_CUADRA: "SELECTED_CUADRA",
+    SELECT_SEGMENT: "SELECTED_SEGMENT",
+    UNSELECT_SEGMENT: "UNSELECTED_SEGMENT",
+    SELECT_CALLE: "SELECTED_CALLE",
 
     MOUSE_MOVED: "MOUSE_MOVED",
 
     // Message types
     MESSAGE_GET_ALL: "G_ALL"
 };
+
+/** Algunas definiciones
+
+ osm: Estructura de datos de OpenStreetMaps.
+ // Nodo
+ {
+ id: Identificador del nodo,
+ lat: latitud,
+ lon: longitud,
+ tags: Diccionario de informacion extra
+ }
+
+ // Calle
+ {
+ id: Identificador de la calle,
+ nodes: Lista de identificadores de nodos que lo conforman (poli-linea);
+ tags: Diccionario de informacion extra
+ }
+
+**/
 
 var actions = {
     websocketConnect: function(){
@@ -55,64 +78,118 @@ var actions = {
         // Creamos el websocket
         var socket = websocket.create(constants.WEBSOCKET_URL, onOpen, onMessage, onError);
     },
-    selectCuadra: function(geojson){
-        this.dispatch(constants.SELECT_CUADRA, geojson);
+    selectCalle: function(geojson){
+        this.dispatch(constants.SELECT_CALLE, geojson);
+    },
+    selectSegment: function(segment){
+        this.dispatch(constants.SELECT_SEGMENT, segment);
+    },
+    unselectSegment: function(immutable){
+        this.dispatch(constants.UNSELECT_SEGMENT, immutable);
     }
 };
 
 var NodeStore = Fluxxor.createStore({
     initialize: function(){
         this.nodes = Immutable.Map();
-        this.selected = Immutable.Map();
-        this.lastSelected = Immutable.Map();
-
         this.bindActions(
-            constants.WEBSOCKET_LOAD, this.onLoad,
-            constants.SELECT_NODE, this.onSelectNode
+            constants.WEBSOCKET_LOAD, this.onLoad
         );
     },
     getState: function(){
-        return Immutable.Map({nodes: this.nodes,
-                              selectedNode: this.selected,
-                              lastSelectedNode: this.lastSelected});
+        return Immutable.Map({nodes: this.nodes});
     },
     onLoad: function(osmData){
         _.map(osmData.nodes, function(osm){
             this.nodes = this.nodes.set(osm.id, Immutable.fromJS(osm));
         }, this);
         this.emit("change");
-    },
-    onSelectNode: function(data){
-        this.lastSelected = this.selected;
-        this.selected = this.nodes.get(data.id);
-        this.emit("change");
     }
 });
 
-var CuadraStore = Fluxxor.createStore({
+var CalleStore = Fluxxor.createStore({
     initialize: function(){
-        this.cuadras = Immutable.Map();
+        this.calles = Immutable.Map();
         this.selected = Immutable.Map();
 
         this.bindActions(
             constants.WEBSOCKET_LOAD, this.onLoad,
-            constants.SELECT_CUADRA, this.onSelectCuadra
+            constants.SELECT_CALLE, this.onSelectCalle
         );
     },
     getState: function(){
         return Immutable.Map({
-            cuadras: this.cuadras,
-            selectedCuadra: this.selected});
+            calles: this.calles,
+            selectedCalle: this.selected});
     },
     onLoad: function(osmData){
-        _.map(osmData.cuadras, function(osm){
-            this.cuadras = this.cuadras.set(osm.id, Immutable.fromJS(osm));
+        _.map(osmData.calles, function(osm){
+            this.calles = this.calles.set(osm.id, Immutable.fromJS(osm));
         }, this);
         this.emit("change");
     },
-    onSelectCuadra: function(osm){
-        this.selected = this.cuadras.get(osm.id);
+    onSelectCalle: function(osm){
+        this.selected = this.calles.get(osm.id);
         this.emit("change");
+    }
+});
+
+
+var DireccionStore = Fluxxor.createStore({
+    initialize: function(){
+        this.direcciones = Immutable.Map();
+        this.selected = null;
+
+        this.bindActions(
+            constants.WEBSOCKET_LOAD, this.onLoad,
+            constants.SELECT_SEGMENT, this.onSelectSegment,
+            constants.UNSELECT_SEGMENT, this.onUnselectSegment);
+    },
+    getState: function(){
+        return Immutable.Map({selectedDir: this.selected});
+    },
+    onLoad: function(direcciones){
+        _.map(direcciones, function(addr){
+            this.direcciones = this.direcciones.set(addr.id,
+                                                    Immutable.fromJS(addr));
+        }, this);
+        this.emit("change");
+    },
+    _seg2Immutable: function(geoSegment){
+        // No importa el orden de los puntos
+        return Immutable.Set.of(
+            Immutable.List(geoSegment[0]),
+            Immutable.List(geoSegment[1]));
+    },
+    onSelectDireccion: function(immutable){
+        this.selected = immutable;
+    },
+    onSelectSegment: function(geoSegment){
+        if (this.selected){
+            var segment = this._seg2Immutable(geoSegment);
+            var dirId = this.selected.get("id");
+            var newDir = this.direcciones.get(dirId)
+                    .get("coordinates")
+                    .add(segment);
+            if (this.selected !== newDir){
+                this.direcciones = this.direcciones.set(dirId, newDir);
+                this.selected = newDir;
+                this.emit("change");
+            }
+        }
+    },
+    onUnselectSegment: function(immutable){
+        if(this.selected){
+            var dirId = this.selected.get("id");
+            var newDir = this.direcciones.get(dirId)
+                    .get("coordinates")
+                    .remove(immutable);
+            if (this.selected !== newDir){
+                this.direcciones = this.direcciones.set(dirId, newDir);
+                this.selected = newDir;
+                this.emit("change");
+            }
+        }
     }
 });
 
@@ -131,12 +208,13 @@ var CommunicationStore = Fluxxor.createStore({
             body: data
         };
         this.socket.send(JSON.stringify(msg));
-    },
+    }
 });
 
 var stores = {
     NodeStore: new NodeStore(),
-    CuadraStore: new CuadraStore(),
+    CalleStore: new CalleStore(),
+    DireccionStore: new DireccionStore(),
     CommunicationStore: new CommunicationStore()
 };
 

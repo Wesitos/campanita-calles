@@ -10,25 +10,25 @@ class MongoHandler():
     @gen.coroutine
     def get_all(client, motor_db):
         cursor_nodos = motor_db.nodes.find({})
-        cursor_cuadras = motor_db.cuadras.find({})
+        cursor_calles = motor_db.cuadras.find({})
         nodos = []
-        cuadras = []
+        calles = []
         while(yield cursor_nodos.fetch_next):
             nodo = cursor_nodos.next_object()
             nodo["id"] = nodo["_id"]
             nodo.pop("_id")
             nodos.append(nodo)
 
-        while(yield cursor_cuadras.fetch_next):
-            cuadra = cursor_cuadras.next_object()
-            cuadra["id"] = cuadra["_id"]
-            cuadra.pop("_id")
-            cuadras.append(cuadra)
+        while(yield cursor_calles.fetch_next):
+            calle = cursor_calles.next_object()
+            calle["id"] = calle["_id"]
+            calle.pop("_id")
+            calles.append(calle)
 
         client.write_message( { "head": "G_ALL",
                                 "body": {
                                     "nodes": nodos,
-                                    "cuadras": cuadras
+                                    "calles": calles
                                 }
                             })
 
@@ -90,7 +90,7 @@ class ChatSocketHandler(websocket.WebSocketHandler):
     #     "D_CUAD",
     #     "u_CUAD"
     # }
-    
+
     def msg_get_data (self, body):
         self.db.nodos.find()
 

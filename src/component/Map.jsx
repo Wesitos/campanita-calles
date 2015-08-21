@@ -15,8 +15,11 @@ var Map = React.createClass({
     },
     // Construye los geoJson
     computeData: function(){
+        var SetSegmentos = (Immutable.Map.isMap(this.selectedDir)?
+                            this.props.selectedDir
+                                .get("coordinates"): Immutable.Set());
         var MapNodos = this.props.nodes;
-        var cuadras = _.map(this.props.cuadras.toArray(), function(osm){
+        var calles = _.map(this.props.calles.toArray(), function(osm){
             var nodeIds = osm.get("nodes").toArray();
             return {
                 type: "Feature",
@@ -43,13 +46,22 @@ var Map = React.createClass({
                 properties: osm.get("tags").toObject()
             };
         });
+        var segmentos = _.map(SetSegmentos.toArray(), function(seg){
+            return {
+                type: "Feature",
+                original: seg,
+                geometry: {
+                    type: "LineString",
+                    coordinates: seg.toJS()
+                }
+            };
+        });
         return {
             nodes: nodos,
-            calles: cuadras,
-            selectedNode: this.props.selectedNode.toJS(),
-            prevSelectedNode: this.props.lastSelectedNode.toJS(),
-            selectedCuadra: this.props.selectedCuadra.toJS(),
-            nodeMap: this.props.nodes
+            calles: calles,
+            selectedCalle: this.props.selectedCalle.toJS(),
+            nodeMap: this.props.nodes,
+            selectedSegments: segmentos
         };
     },
     componentDidUpdate: function(){
